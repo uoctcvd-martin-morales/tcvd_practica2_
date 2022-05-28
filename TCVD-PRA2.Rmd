@@ -1,11 +1,16 @@
 ---
-title: "TCVD-PRA2"
-subtitle: "Prueba"
+title: "Japan Automated Validation Model"
+subtitle: "Tipología y ciclo de vida de los datos - Práctica 2"
 author: "Francisco J. Morales & Antonio Martín"
 date: "`r Sys.Date()`"
 classoption: a4paper
 documentclass: book
 always_allow_html: true
+urlcolor: blue #black
+linkcolor: blue #black
+link-citations: yes
+fontsize: 12pt # 10pt,11pt
+geometry: margin = 2.5cm #1.2in
 output:
   html_document:
     highlight: default
@@ -32,7 +37,7 @@ library(RColorBrewer)
 library(corrgram)
 ```
 
-## Descripción del dataset.
+# Descripción del dataset
 
 Nos disponemos a estudiar un Dataset cedido por el MLIT (Ministry of Land, Infrastructure, Transport and Tourism) de Japón. Es un dataset que se publicó en Kaggle y contiene Un listado de transacciones de inmuebles desde 2005 a 2019 de las 7 prefecturas de Japón y puedes descargarse en la siguiente url:
 
@@ -42,7 +47,7 @@ Este dataset dispone no sólo del precio de venta del inmuble sino de variables 
 
 En este ejercicio, nos dispondremos a unificar todos los datos de las 47 prefecturas en el mismo dataset, hacer una limpieza de ellos y entrenar un modelo de regresión para valorar futuros inmuebles (AVM) que estén a la venta y compararlo con la misma oferta para tomar decisiones.
 
-## Integración y selección de los datos de interés a analizar.
+# Integración y selección de datos
 
 Empezamos por cargar el primer fichero que encontramos. Observamos los diferentes tipos de activos que tenemos y descartamos para quedarnos únicamente con las viviendas. Para ello, nos basamos en los campos Use y Purpose. Nuestra filosofía que si alguno de los usos que se le da al inmueble es House, lo consideramos vivienda. Si el campo está vacío, tomamos el valor de Purpose.
 
@@ -102,7 +107,7 @@ columns <- c("No","Type","Region","MunicipalityCode","Prefecture","Municipality"
 df_japan <- df_japan[,columns]
 ```
 
-## Limpieza de los datos.
+# Limpieza de los datos
 
 Para empezar le daremos una vista general a set de datos.
 
@@ -147,7 +152,7 @@ df_japan <- df_japan[!is.na(df_japan$Area),]
 df_japan$UnitPrice<- df_japan$TradePrice/df_japan$Area
 ```
 
-#Outliers
+## Outliers
 
 Quitamos Outliers para limpiar los datos.
 
@@ -164,14 +169,14 @@ df_japan<- df_japan[-idx_out_,]
 
 ```
 
-## Análisis de los datos.
+# Análisis de los datos
 
-### Selección de los grupos de datos que se quieren analizar/comparar.
+## Selección de grupos
 
-### Comprobación de la normalidad y homogeneidad de la varianza.
+## Comprobación de normalidad y homocedasticidad
 
-### Aplicación de pruebas estadísticas para comparar los grupos de datos.
+## Aplicación de pruebas estadísticas
 
-## Representación de los resultados a partir de tablas y gráficas.
+# Resultados
 
-## Resolución del problema.
+# Resolución del problema
