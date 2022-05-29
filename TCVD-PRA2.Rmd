@@ -9,14 +9,9 @@ always_allow_html: true
 urlcolor: blue #black
 linkcolor: blue #black
 link-citations: yes
-fontsize: 12pt # 10pt,11pt
+fontsize: 10pt # 10pt,11pt
 geometry: margin = 2.5cm #1.2in
 output:
-  pdf_document:
-    toc: yes
-    toc_depth: '2'
-    highlight: default
-    number_sections: yes
   html_document:
     highlight: default
     number_sections: yes
@@ -25,6 +20,11 @@ output:
     toc_depth: 2
     include:
       in_header: 'Header.html'
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+    highlight: default
+    number_sections: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -58,9 +58,6 @@ df_japan <- read.csv("data/japan_housing_data/trade_prices/01.csv")
 df_japan_0 <- read.csv("data/japan_housing_data/trade_prices/01.csv")
 
 table(df_japan$Type)
-
-# df_japan <- df_japan[df_japan[,'Type'] != 'Agricultural Land' & df_japan[,'Type'] != 'Forest Land',]
-
 head(table(df_japan$Use))
 
 head(table(df_japan$Purpose))
@@ -85,7 +82,8 @@ resources_root <-"data/japan_housing_data/trade_prices/"
 
 for(i in seq(from=2, to=47)){
   index_file <- paste('0',toString(i),sep = "",collapse = NULL)
-  file <- paste(resources_root,substr(index_file, nchar(index_file)-1, nchar(index_file)),'.csv',sep = "",collapse = NULL)
+  file <- paste(resources_root,substr(index_file, nchar(index_file)-1, 
+                                      nchar(index_file)),'.csv',sep = "",collapse = NULL)
   df <- read.csv(file)
   
   df[df_japan$Use=='','Use'] <- df[df$Use=='','Purpose']
@@ -102,9 +100,11 @@ for(i in seq(from=2, to=47)){
 Ahora, seleccionaremos los campos que a priori creemos que nos servirán para el modelo y excluiremos las redundantes.
 
 ```{r, warning=FALSE}
-columns <- c("No","Type","Region","MunicipalityCode","Prefecture","Municipality","DistrictName","NearestStation",
-             "TimeToNearestStation","MaxTimeToNearestStation","TradePrice","FloorPlan","Area","UnitPrice",
-             "LandShape","Frontage","BuildingYear","Structure","CityPlanning","Year","Quarter","Renovation")
+columns <- c("No","Type","Region","MunicipalityCode","Prefecture","Municipality",
+             "DistrictName","NearestStation","TimeToNearestStation",
+             "MaxTimeToNearestStation","TradePrice","FloorPlan","Area","UnitPrice",
+             "LandShape","Frontage","BuildingYear","Structure","CityPlanning",
+             "Year","Quarter","Renovation")
 
 df_japan <- df_japan[,columns]
 ```
@@ -114,8 +114,6 @@ df_japan <- df_japan[,columns]
 Para empezar le daremos una vista general a set de datos.
 
 ```{r, warning=FALSE}
-str(df_japan)
-
 summary(df_japan)
 
 duplicados
@@ -133,12 +131,8 @@ Tomamos las siguientes decisiones.
 
 
 ```{r, warning=FALSE}
+
 df_japan$Region[df_japan$Region == ''] <- "Other"
-
-table(df_japan$Type,df_japan$Region)
-
-table(df_japan$Year)
-
 df_japan$FloorPlan[df_japan$FloorPlan == ''] <- "-"
 
 df_japan$DistrictName[df_japan$DistrictName == '(No Address)'] <- "-"
@@ -154,6 +148,11 @@ df_japan <- df_japan[!is.na(df_japan$Area),]
 
 df_japan$UnitPrice<- df_japan$TradePrice/df_japan$Area
 df_japan <- df_japan[!is.na(df_japan$BuildingYear),]
+
+table(df_japan$Type,df_japan$Region)
+
+table(df_japan$Year)
+
 ```
 
 ## Outliers
@@ -166,16 +165,15 @@ rating_plot <- ggplot(df_japan, aes(y=TradePrice)) + geom_boxplot()
 ggplotly(rating_plot)
 
 out_ <- boxplot.stats(df_japan$TradePrice)$out
-
 idx_out_ <- which(df_japan$TradePrice %in% out_)
-
 df_japan<- df_japan[-idx_out_,]
-
 ```
 
 # Análisis de los datos
 
 ## Selección de grupos
+
+A priori, nos vamos a centrar en estimar el precio de la vivienda a partir del propio tipo. Vamos a suponer que el precio cuadrado de los pisos vendran dados por una distribución aleatoria con su media y varianza y estas serán diferentes de la distribución formada por los comercios, o chalets, etc.
 
 ## Comprobación de normalidad y homocedasticidad
 
@@ -188,12 +186,11 @@ leveneTest(y = df_japan$TradePrice, group = df_japan$Type, center = "median")
 ```
 
 
-Así a partir del resultado del test podemos concluir que no se da una homogeneidad en la varianza entre los distintos tipos de inmuebles.
-
-
+Así a partir del resultado del test (p-value < 0,05) podemos concluir que no se da una homogeneidad en la varianza entre los distintos tipos de inmuebles.
 
 ## Aplicación de pruebas estadísticas
-#Análisis descriptivo y de correlaciones
+
+### Correlaciones
 
 Empezaremos primero analizando las correlaciones entre las variables numéricas.
 
@@ -211,7 +208,7 @@ corrplot(M,
 
 Vemos que las variables Area y Frontage están correlacionadas entre sí y de manera más clara con UnitPrice que MunicipalityCode y Quarter, pero por si solas no explican el precio por metro cuadrado. Tendremos que ver la influencia de las otras variables a lo largo del tiempo.
 
-## Year
+#### Year
 
 Veamos como ha evolucionado el metro cuadrado a lo largo del tiempo.
 ```{r}
@@ -224,9 +221,9 @@ tb0 <- ggplot(Unit.Price.Year[Unit.Price.Year$Year>=2010,], aes(x=factor(Year), 
         geom_bar(col='blue',stat='identity') + geom_smooth(method = "lm", se=FALSE, color="black", aes(group=1)) 
 tb0
 ```
-Vemos que en 2014 hubo una bajada general, pero desde ese momento el valor del metro cuadrado ha ido creciendo. El punto aquí es que seguramente un el precio del metro de un piso no haya evolucionado igual que el de una casa en mitad del bosque. Veamos como a los largo de los años se comporta el precio del metro cuadrado en función de diferentes variables.
+Vemos que en 2012 hubo una bajada general, pero desde ese momento el valor del metro cuadrado ha ido creciendo. El punto aquí es que seguramente un el precio del metro de un piso no haya evolucionado igual que el de una casa en mitad del bosque. Veamos como a los largo de los años se comporta el precio del metro cuadrado en función de diferentes variables.
 
-## Type
+#### Type
 
 ```{r, warning=FALSE}
 
@@ -240,7 +237,7 @@ tb1
 ```
 Vemos aquí que no solo el precio es significativamente diferente, sino que crecen a diferentes velocidades.
 
-## CityPlanning
+#### CityPlanning
 
 ```{r, warning=FALSE}
 Unit.Price.Year.Planning <- df_japan %>% group_by(Year,CityPlanning) %>% summarise(mean(UnitPrice), .groups = 'drop')
@@ -268,19 +265,28 @@ tb3
 La misma situación es un factor a tener en cuenta también que no es lo mismo una vivienda en Tokio que en Hokkaido. Incluso, posiblemente dentro de la misma prefectura, la evolución del metro cuadrado sea diferente.
 
 
-# Resultados
+### Comparación de medias
 
-#Modelo
+Pasemos a estudiar si, por lo general, el precio de un inmueble es diferente dependiendo del tipo. En este caso nos hemos centrado en los tipos más comunes que son: Pisos (Pre-owned Condominiums, etc.) y casas (Residential Land(Land and Building). Como hemos asumido normalidad y hemos comprobado que no tienen la misma varianza, debemos la prueba t-Student para muestras independeientes con varianzas diferentes..
 
-En un principio se pensaba hacer un modelo para estimar el valor del metro cuadrado a traves de **comparables**. El problema aqui es que por falta de experiencia del sector inmobiliario no pudimos encontrar una forma de encontrar un "inmueble parecido". El hecho de cómo ha evolucionado el precio del metro cuadrado en los últimos años y en la hetereogeneidad de este en diferentes prefectura y dentro de estas, en los diferentes municipios y  distritos nos impedía encontrar un inmueble similar a otro. Una opción con más tiempo sería aplicar un algoritmo de Clustering o un Árbol de decisión para esto. Como se pedía también una solución sencilla, hemos optado en seleccionar las variables que hemos visto que influyen en el precio del metro cuadrado y crear un modelo de regresión lineal múltiple con regresores cuantitativos y cualitativos.
+````{r, warning=FALSE} 
+t.test(df_japan$TradePrice[which(df_japan$Type == "Pre-owned Condominiums, etc.")], 
+       df_japan$TradePrice[which(df_japan$Type == "Residential Land(Land and Building)")], 
+       var.equal=FALSE)
+````
 
-Como hemos observado que la situación ha cambiado con los años, siendo muy diferente de la actual, únicamente nos quedaremoscon los datos de los 2 últimos años registrados en el dataset.
+Como el p-value es inferior a 0.05, descartamos la hipótesis nula de que las medias poblacionales de las diferentes variables son iguales.
+
+### Modelo de regresión
+
+En un principio se pensaba hacer un modelo para estimar el valor del metro cuadrado a traves de **comparables**. El hecho de cómo ha evolucionado el precio del metro cuadrado en los últimos años y en la hetereogeneidad de este en diferentes prefectura y dentro de estas, en los diferentes municipios y  distritos nos impedía encontrar un inmueble similar a otro. Una opción con más tiempo sería aplicar un algoritmo de Clustering o un Árbol de decisión para esto. En este caso hemos optado en seleccionar las variables que hemos visto que influyen en el precio del metro cuadrado y crear un modelo de regresión lineal.
+
+Como hemos observado que la situación ha cambiado con los años, siendo muy diferente de la actual, únicamente nos quedaremos con los datos de los 2 últimos años registrados en el dataset.
 
 ```{r, warning=FALSE}
 df_japan <- df_japan[df$Year>=2018,]
 
 ```
-
 
 A continuación creamos la muestra aleatoria. Añadimos las variables que hemos estudiado y algunas que pueden tener relevancia para el diseño del modelo.
 
@@ -293,8 +299,6 @@ df_japan_test <- df_japan[test_index,]
 columns_model <- c("Type","Region",'MunicipalityCode',"Prefecture","MaxTimeToNearestStation",
                    "FloorPlan","Area","UnitPrice",
              "LandShape","Frontage","CityPlanning","Year","Quarter","Renovation", "Structure","BuildingYear")
-
-
 
 df_japan_train <- df_japan[train_index,columns_model]
 
@@ -332,7 +336,7 @@ Añadimos también MunicipalityCode, Structure y BuildingYear a la regresión co
 ```{r, warning=FALSE}
 
 
-model3 <- lm(UnitPrice~factor(Type)+Area + Frontage+factor(Region)+ MunicipalityCode + factor(Prefecture)+
+model3 <- lm(UnitPrice~factor(Type)+Area + Frontage+factor(Region)+ factor(Prefecture)+
 factor(CityPlanning)+factor(Renovation)+ factor(Structure) + BuildingYear, data=df_japan_train, na.action = na.exclude)
 summary(model3)$r.squared
 
@@ -342,7 +346,6 @@ Esto mejora en gran medida la regresión, por lo que mantenemos este como modelo
 Por último llevamos a cabo la predicción de los valores de TradePrice para los datos de test y calculamos el error medio cometido en la predicción en base a la media del precio de los inmuebles.
 
 ```{r, warning=FALSE}
-
 df_japan_test$NewValue <- predict(model3, df_japan_test, interval = c("confidence"), se.fit=FALSE)
 
 
@@ -350,7 +353,6 @@ df_japan_result <- df_japan_test[,c('No','Prefecture','TradePrice')]
 df_japan_result$EstimateTradePrice <-df_japan_test$NewValue *df_japan_test$Area
 
 summary(df_japan_result$TradePrice - df_japan_result$EstimateTradePrice)
-round(mean(df_japan_result$TradePrice - df_japan_result$EstimateTradePrice)/mean(df_japan_test$TradePrice), 2)
 
 ```
 
