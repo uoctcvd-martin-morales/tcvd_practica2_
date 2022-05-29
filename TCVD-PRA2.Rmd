@@ -35,6 +35,8 @@ library(plotly)
 library(corrplot)
 library(RColorBrewer)
 library(corrgram)
+library(ggpubr)
+library(car)
 ```
 
 # Descripción del dataset
@@ -175,8 +177,185 @@ df_japan<- df_japan[-idx_out_,]
 
 ## Comprobación de normalidad y homocedasticidad
 
+Al tener un volumen elevado de registros podemos aplicar el teorema central del límite por el que suponemos que la media muestral seguirá una distribución normal.
+
+En cuanto a la homocedasticidad, podemos comprobar si la varianza se mantiene entre inmuebles de distinto tipo:
+
+```{r, warning=FALSE}
+leveneTest(y = df_japan$TradePrice, group = df_japan$Type, center = "median")
+```
+
+
+Así a partir del resultado del test podemos concluir que no se da una homogeneidad en la varianza entre los distintos tipos de inmuebles.
+
+
+
 ## Aplicación de pruebas estadísticas
+#Análisis descriptivo y de correlaciones
+
+Empezaremos primero analizando las correlaciones entre las variables numéricas.
+
+```{r, warning=FALSE}
+cuantitativas <- df_japan %>% select (c(Area, UnitPrice, Frontage, MunicipalityCode, Quarter))
+
+M <-cor(cuantitativas)
+
+corrplot(M, 
+         col=brewer.pal(n=8, name="RdYlBu"))
+
+
+```
+
+
+Vemos que las variables Area y Frontage están correlacionadas, pero por si solas no explican el precio por metro cuadrado. Tendremos que ver la influencia de las otras variables a lo largo del tiempo.
+
+## Year
+
+Veamos como ha evolucionado el metro cuadrado a lo largo del tiempo.
+```{r}
+
+Unit.Price.Year <- df_japan %>% group_by(Year) %>% summarise(mean(UnitPrice))
+
+colnames(Unit.Price.Year) <- c("Year","AvgPrice")
+
+tb0 <- ggplot(Unit.Price.Year[Unit.Price.Year$Year>=2010,], aes(x=factor(Year), y=AvgPrice)) +
+        geom_bar(col='blue',stat='identity') + geom_smooth(method = "lm", se=FALSE, color="black", aes(group=1)) 
+tb0
+```
+Vemos que en 2014 hubo una bajada general, perodesde ese momento el valor del metro cuadrado ha ido creciendo. El punto aquí es que seguramente un el precio del metro de un piso no haya evolucionado igual que el una casa en mitad del bosque. Veamos como a los largo de los años se comporta el percio del metro cuadrado en diferente variables
+
+## Type
+
+```{r, warning=FALSE}
+
+Unit.Price.Year.Type <- df_japan %>% group_by(Year,Type) %>% summarise(mean(UnitPrice), .groups = 'drop')
+
+colnames(Unit.Price.Year.Type) <- c("Year","Type","AvgPrice")
+
+tb1 <- ggplot(Unit.Price.Year.Type[Unit.Price.Year.Type$Year>=2014,], aes(x=factor(Year), y=AvgPrice))+ facet_wrap(~Type)+
+        geom_bar(col='blue',stat='identity') + geom_smooth(method = "lm", se=FALSE, color="black", aes(group=1)) 
+tb1
+```
+Vemos aquí que no solo el precio es significativamente diferente, sino que crecen a diferentes velocidades.
+
+## CityPlanning
+
+```{r, warning=FALSE}
+Unit.Price.Year.Planning <- df_japan %>% group_by(Year,CityPlanning) %>% summarise(mean(UnitPrice), .groups = 'drop')
+
+colnames(Unit.Price.Year.Planning) <- c("Year","CityPlanning","AvgPrice")
+
+tb2 <- ggplot(Unit.Price.Year.Planning[Unit.Price.Year.Planning$Year>=2016,], aes(x=factor(Year), y=AvgPrice))+ facet_wrap(~CityPlanning)+
+        geom_bar(col='blue',stat='identity') + geom_smooth(method = "lm", se=FALSE, color="black", aes(group=1)) 
+
+tb2
+```
+Aquí vemos la misma situación que antes. No es lo mismo una vivienda en una zona comercial donde el precio es alto y se mantiene que en unra zona industrial que cada vez se va devaluando que en una "Quasi-residential Zone" donde en estos ultimos años empieza a valer bastante mas el metro cuadrado.
+
+```{r, warning=FALSE}
+Unit.Price.Year.Prefecture <- df_japan %>% group_by(Year,Prefecture) %>% summarise(mean(UnitPrice), .groups = 'drop')
+
+colnames(Unit.Price.Year.Prefecture) <- c("Year","Prefecture","AvgPrice")
+
+tb3 <- ggplot(Unit.Price.Year.Prefecture[Unit.Price.Year.Prefecture$Year>=2016,], aes(x=factor(Year), y=AvgPrice))+ facet_wrap(~Prefecture)+
+        geom_bar(col='blue',stat='identity') + geom_smooth(method = "lm", se=FALSE, color="black", aes(group=1)) 
+
+tb3
+```
+
+La misma situación es un factor a tener en cuenta también que no es lo mismo una vivienda en Tokio que en Hokkaido. Incluso, posiblemente dentro de la misma prefectura, la evolución del metro cuadrado sea diferente.
+
 
 # Resultados
 
+#Modelo
+
+En un principio se pensaba hacer un modelo para estimar el valor del metro cuadrado a traves de **comparables**. El problema aqui es que por falta de experiencia del sector inmobiliario no pudimos encontrar una forma de encontrar un "inmueble parecido". El hecho de cómo ha evolucionado el precio del metro cuadrado en los últimos años y en la hetereogeneidad de este en diferentes prefectura y dentro de estas, en los diferentes municipios y  distritos nos impedía encontrar un inmueble similar a otro. Una opción con más tiempo sería aplicar un algoritmo de Clustering o un Árbol de decisión para esto. Como se pedía también una solución sencilla, hemos optado en seleccionar las variables que hemos visto que influyen en el precio del metro cuadrado y crear un modelo de regresión lineal múltiple con regresores cuantitativos y cualitativos.
+
+Como hemos observado que la situación hace 5 años era muy diferente a la actual, únicamente me quedaré conlos datos de los 2 últimos años.
+
+```{r, warning=FALSE}
+df_japan <- df_japan[df$Year>=2018,]
+
+```
+
+
+A continuación creamos la muestra aleatoria. Añadimos las variables que hemos estudiado y algunas que pueden tener relevancia para el diseño del modelo.
+
+```{r, warning=FALSE}
+set.seed(112)
+train_index <- sample(1:nrow(df_japan), 0.9 * nrow(df_japan))
+test_index <- setdiff(1:nrow(df_japan), train_index)
+df_japan_test <- df_japan[test_index,]
+
+columns_model <- c("Type","Region",'MunicipalityCode',"Prefecture","MaxTimeToNearestStation",
+                   "FloorPlan","Area","UnitPrice",
+             "LandShape","Frontage","CityPlanning","Year","Quarter","Renovation", "Structure","BuildingYear")
+
+
+
+df_japan_train <- df_japan[train_index,columns_model]
+
+```
+
+
+
+Creamos nuestro primer modelo, empleando únicamente las variables Area y Frontage que habíamos visto que presentan una fuerte correlación
+con el precio de las viviendas.
+
+
+```{r, warning=FALSE}
+
+model <- lm(UnitPrice~Area+ Frontage, data=df_japan_train)
+summary(model)
+```
+
+
+Como se puede ver, el valor de R^2 es bastante bajo (0'2245) por lo que planteamos añadir algunas de las variables
+categóricas del dataset (Type, Region, Prefecture, CityPlanning y Renovation) para observar si mejoran el modelo a crear:
+
+```{r, warning=FALSE}
+
+
+model2 <- lm(UnitPrice~factor(Type)+Area + Frontage+factor(Region) + factor(Prefecture)+
+factor(CityPlanning)+factor(Renovation), data=df_japan_train)
+summary(model2)
+
+
+
+```
+Tras añadir estas variables el modelo mejora bastante (hasta un R^2 = 0'5628). 
+
+
+Añadimos también MunicipalityCode y Structure a la regresión con el siguiente resultado:
+
+```{r, warning=FALSE}
+model3 <- lm(UnitPrice~factor(Type)+Area + Frontage+factor(Region)+ MunicipalityCode + factor(Prefecture)+
+factor(CityPlanning)+factor(Renovation)+ factor(Structure), data=df_japan_train, na.action = na.exclude)
+summary(model3)
+
+```
+Esto mejora ligeramente la regresión, por lo que lo mantenemos como modelo fianl.
+
+Por último llevamos a cabo la predicción de los valores de TradePrice para los datos de test, obteniendo un error medio de -338353.1
+
+```{r, warning=FALSE}
+
+df_japan_test$NewValue <- predict(model3, df_japan_test, interval = c("confidence"))
+
+
+df_japan_result <- df_japan_test[,c('No','Prefecture','TradePrice')]
+df_japan_result$EstimateTradePrice <-df_japan_test$NewValue *df_japan_test$Area
+
+summary(df_japan_result$TradePrice - df_japan_result$EstimateTradePrice)
+mean(df_japan_result$TradePrice - df_japan_result$EstimateTradePrice)
+
+```
+
 # Resolución del problema
+
+Como conclusión tras el estudio del dataset podemos concluir que la estimación del valor exacto de un inmueble atiende a un gran número
+de variables, complicando en gran medida la generación de modelos predictivos. Aun así, el modelo generado, si bien sigue teniendo un margen 
+de mejora bastante amplio, es capaz de reducir el error cometido por la tasación de inmuebles únicamente por su tamaño (primer modelo) y pone
+de manifiesto la importancia de la ubicación y tipo de construcción de las viviendas a estudiar. 
+
