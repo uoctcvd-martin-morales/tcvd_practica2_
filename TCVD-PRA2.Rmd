@@ -360,3 +360,16 @@ summary(df_japan_result$TradePrice - df_japan_result$EstimateTradePrice)
 
 Como conclusión tras el estudio del dataset podemos concluir que la estimación del valor exacto de un inmueble atiende a un gran número de variables, complicando en gran medida la generación de modelos predictivos. Aun así, el modelo generado es capaz de reducir el error cometido por la tasación de inmuebles únicamente por su tamaño (primer modelo) y pone de manifiesto la importancia de la ubicación, tipo y momento de construcción de las viviendas a estudiar. Encontramos el porcentaje de error del 5% en la estimación del precio de las viviendas como una aproximación bastante buena a un modelo predictivo real. 
 
+# Generación del Output
+```{r, warning=FALSE}
+write.csv(x = df_japan_result, file = "df_japan_result.csv", row.names = TRUE)
+```
+
+# Tabla de contribuciones
+
+| Contribuciones  | Firma  |
+|--- |--- |
+| Investigación previa  | FJMH - AME  |
+| Redacción de las respuestas  | FJMH - AME  |
+| Desarrollo código  | FJMH - AME  |
+
