@@ -12,6 +12,11 @@ link-citations: yes
 fontsize: 9pt # 10pt,11pt
 geometry: margin = 2.5cm #1.2in
 output:
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+    highlight: default
+    number_sections: yes
   html_document:
     highlight: default
     number_sections: yes
@@ -20,11 +25,6 @@ output:
     toc_depth: 2
     include:
       in_header: 'Header.html'
-  pdf_document:
-    toc: yes
-    toc_depth: '2'
-    highlight: default
-    number_sections: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -199,7 +199,7 @@ corrplot(M,
 
 ```
 
-Vemos que las variables Area y Frontage están correlacionadas entre sí y de manera más clara con UnitPrice que MunicipalityCode y Quarter, pero por si solas no explican el precio por metro cuadrado. Tendremos que ver la influencia de las otras variables a lo largo del tiempo.
+Vemos que las variables Area y Frontage están correlacionadas entre sí y de manera más clara con UnitPrice que MunicipalityCode y Quarter, pero por sí solas no explican el precio por metro cuadrado. Tendremos que ver la influencia de las otras variables a lo largo del tiempo.
 
 #### Year
 
@@ -237,7 +237,7 @@ Vemos aquí que no solo el precio es significativamente diferente, sino que crec
 
 #### CityPlanning
 
-Veamos respecto a las zonas.
+Veamos los datos respecto a las zonas.
 
 ```{r, warning=FALSE}
 Unit.Price.Year.Planning <- df_japan %>% group_by(Year,CityPlanning) %>% summarise(mean(UnitPrice), .groups = 'drop')
@@ -250,7 +250,7 @@ tb2 <- ggplot(Unit.Price.Year.Planning[Unit.Price.Year.Planning$Year>=2016,], ae
 tb2
 ```
 
-Aquí vemos la misma situación que antes. No es lo mismo una vivienda en una zona comercial donde el precio es alto y se mantiene que en una zona industrial que cada vez se va devaluando que en una "Quasi-residential Zone" donde en estos ultimos años empieza a valer bastante mas el metro cuadrado.
+Aquí vemos la misma situación que antes. No es lo mismo una vivienda en una zona comercial donde el precio es alto y se mantiene que en una zona industrial que cada vez se va devaluando que en una "Quasi-residential Zone" donde en estos últimos años empieza a valer bastante más el metro cuadrado.
 
 #### Prefecture
 
@@ -271,7 +271,7 @@ La misma situación es un factor a tener en cuenta también que no es lo mismo u
 
 ### Comparación de medias
 
-Pasemos a estudiar si, por lo general, el precio de un inmueble es diferente dependiendo del tipo. En este caso nos hemos centrado en los tipos más comunes que son: Pisos (Pre-owned Condominiums, etc.) y casas (Residential Land(Land and Building). Como hemos asumido normalidad y hemos comprobado que no tienen la misma varianza, debemos la prueba t-Student para muestras independeientes con varianzas diferentes..
+Pasemos a estudiar si, por lo general, el precio de un inmueble es diferente dependiendo del tipo. En este caso nos hemos centrado en los tipos más comunes que son: Pisos (Pre-owned Condominiums, etc.) y casas (Residential Land(Land and Building). Como hemos asumido normalidad y hemos comprobado que no tienen la misma varianza, debemos llevar a cabo la prueba t-Student para muestras independeientes con varianzas diferentes.
 
 ````{r, warning=FALSE} 
 t.test(df_japan$TradePrice[which(df_japan$Type == "Pre-owned Condominiums, etc.")], 
@@ -279,7 +279,7 @@ t.test(df_japan$TradePrice[which(df_japan$Type == "Pre-owned Condominiums, etc."
        var.equal=FALSE)
 ````
 
-Como el p-value es inferior a 0.05, descartamos la hipótesis nula de que las medias poblacionales de las diferentes variables son iguales.
+Como el p-value es inferior a 0.05, descartamos la hipótesis nula de que las medias poblacionales de los diferentes tipos son iguales.
 
 ### Modelo de regresión
 
@@ -330,7 +330,7 @@ summary(model2)$r.squared
 ```
 Como podemos ver, tras añadir estas variables el modelo mejora bastante.
 
-Añadimos también MunicipalityCode, Structure y BuildingYear a la regresión con el siguiente resultado:
+Añadimos también Structure y BuildingYear a la regresión con el siguiente resultado:
 
 ```{r, warning=FALSE}
 
@@ -342,8 +342,7 @@ summary(model3)$r.squared
 ```
 Esto mejora en gran medida la regresión, por lo que mantenemos este como modelo final.
 
-Por último llevamos a cabo la predicción de los valores de TradePrice para los datos de test y calculamos el error medio cometido en la predicción en base a la media del precio de los inmuebles.
-
+Por último llevamos a cabo la predicción de los valores de TradePrice para los datos de test y mostramos también las diferencias entre los valores reales y predichos.
 ```{r, warning=FALSE}
 df_japan_test$NewValue <- predict(model3, df_japan_test, interval = c("confidence"), se.fit=FALSE)
 
@@ -357,7 +356,7 @@ summary(df_japan_result$TradePrice - df_japan_result$EstimateTradePrice)
 
 # Resolución del problema
 
-Como conclusión tras el estudio del dataset podemos concluir que la estimación del valor exacto de un inmueble atiende a un gran número de variables, complicando en gran medida la generación de modelos predictivos. Aun así, el modelo generado es capaz de reducir el error cometido por la tasación de inmuebles únicamente por su tamaño (primer modelo) y pone de manifiesto la importancia de la ubicación, tipo y momento de construcción de las viviendas a estudiar. Encontramos el porcentaje de error del 5% en la estimación del precio de las viviendas como una aproximación bastante buena a un modelo predictivo real. 
+Como conclusión tras el estudio del dataset podemos concluir que la estimación del valor exacto de un inmueble atiende a un gran número de variables, complicando en gran medida la generación de modelos predictivos. Aun así, el modelo generado es capaz de reducir el error cometido por la tasación de inmuebles únicamente por su tamaño (primer modelo) y pone de manifiesto la importancia de la ubicación, tipo y momento de construcción de las viviendas a estudiar.
 
 # Generación del Output
 ```{r, warning=FALSE}
