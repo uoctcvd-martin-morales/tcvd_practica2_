@@ -3,20 +3,15 @@ title: "Japan Automated Validation Model"
 subtitle: "Tipología y ciclo de vida de los datos - Práctica 2"
 author: "Francisco J. Morales & Antonio Martín"
 date: "`r Sys.Date()`"
-classoption: a4paper
+classoption: openany
 documentclass: book
 always_allow_html: true
 urlcolor: blue #black
 linkcolor: blue #black
 link-citations: yes
-fontsize: 10pt # 10pt,11pt
+fontsize: 9pt # 10pt,11pt
 geometry: margin = 2.5cm #1.2in
 output:
-  pdf_document:
-    toc: yes
-    toc_depth: '2'
-    highlight: default
-    number_sections: yes
   html_document:
     highlight: default
     number_sections: yes
@@ -25,6 +20,11 @@ output:
     toc_depth: 2
     include:
       in_header: 'Header.html'
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+    highlight: default
+    number_sections: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -41,7 +41,7 @@ library(car)
 
 # Descripción del dataset
 
-Nos disponemos a estudiar un Dataset cedido por el MLIT (Ministry of Land, Infrastructure, Transport and Tourism) de Japón. Es un dataset que se publicó en Kaggle y contiene un listado de transacciones de inmuebles desde 2005 a 2019 de las 7 prefecturas de Japón y puedes descargarse en la siguiente url:
+Nos disponemos a estudiar un Dataset cedido por el MLIT (Ministry of Land, Infrastructure, Transport and Tourism) de Japón. Es un dataset que se publicó en Kaggle y contiene un listado de transacciones de inmuebles desde 2005 a 2019 de las 47 prefecturas de Japón y puedes descargarse en la siguiente url:
 
 https://www.kaggle.com/datasets/nishiodens/japan-real-estate-transaction-prices
 
@@ -73,8 +73,6 @@ duplicados <- nrow(df_japan[duplicated(df_japan), ])
 df_japan <- df_japan[!duplicated(df_japan), ]
 
 ```
-
-
 Una vez hemos cargado el primer fichero, hacemos un bucle para cargar el resto. Para optimizar recursos, iremos filtrando los tipos y revisando los duplicados en cada fichero.
 
 ```{r, warning=FALSE}
@@ -96,7 +94,6 @@ for(i in seq(from=2, to=47)){
   df_japan <- union(df_japan,df)
 }
 ```
-
 Ahora, seleccionaremos los campos que a priori creemos que nos servirán para el modelo y excluiremos las redundantes.
 
 ```{r, warning=FALSE}
@@ -127,8 +124,6 @@ Tomamos las siguientes decisiones.
 * Calculamos nosotros el precio por metro cuadrado dividiendo el precio de la venta entre el área. Asumimos que el campo AREA, incluye el resto de campos referidos a superficies.
 * Eliminamos los terrenos no edificados.
 * Limpiamos datos nulos.
-
-
 
 ```{r, warning=FALSE}
 
@@ -185,7 +180,6 @@ En cuanto a la homocedasticidad, podemos comprobar si la varianza se mantiene en
 leveneTest(y = df_japan$TradePrice, group = df_japan$Type, center = "median")
 ```
 
-
 Así a partir del resultado del test (p-value < 0,05) podemos concluir que no se da una homogeneidad en la varianza entre los distintos tipos de inmuebles.
 
 ## Aplicación de pruebas estadísticas
@@ -205,12 +199,12 @@ corrplot(M,
 
 ```
 
-
 Vemos que las variables Area y Frontage están correlacionadas entre sí y de manera más clara con UnitPrice que MunicipalityCode y Quarter, pero por si solas no explican el precio por metro cuadrado. Tendremos que ver la influencia de las otras variables a lo largo del tiempo.
 
 #### Year
 
 Veamos como ha evolucionado el metro cuadrado a lo largo del tiempo.
+
 ```{r}
 
 Unit.Price.Year <- df_japan %>% group_by(Year) %>% summarise(mean(UnitPrice))
@@ -221,9 +215,12 @@ tb0 <- ggplot(Unit.Price.Year[Unit.Price.Year$Year>=2010,], aes(x=factor(Year), 
         geom_bar(col='blue',stat='identity') + geom_smooth(method = "lm", se=FALSE, color="black", aes(group=1)) 
 tb0
 ```
+
 Vemos que en 2012 hubo una bajada general, pero desde ese momento el valor del metro cuadrado ha ido creciendo. El punto aquí es que seguramente un el precio del metro de un piso no haya evolucionado igual que el de una casa en mitad del bosque. Veamos como a los largo de los años se comporta el precio del metro cuadrado en función de diferentes variables.
 
 #### Type
+
+Veamos respecto al Tipo.
 
 ```{r, warning=FALSE}
 
@@ -235,9 +232,12 @@ tb1 <- ggplot(Unit.Price.Year.Type[Unit.Price.Year.Type$Year>=2014,], aes(x=fact
         geom_bar(col='blue',stat='identity') + geom_smooth(method = "lm", se=FALSE, color="black", aes(group=1)) 
 tb1
 ```
+
 Vemos aquí que no solo el precio es significativamente diferente, sino que crecen a diferentes velocidades.
 
 #### CityPlanning
+
+Veamos respecto a las zonas.
 
 ```{r, warning=FALSE}
 Unit.Price.Year.Planning <- df_japan %>% group_by(Year,CityPlanning) %>% summarise(mean(UnitPrice), .groups = 'drop')
@@ -249,7 +249,12 @@ tb2 <- ggplot(Unit.Price.Year.Planning[Unit.Price.Year.Planning$Year>=2016,], ae
 
 tb2
 ```
+
 Aquí vemos la misma situación que antes. No es lo mismo una vivienda en una zona comercial donde el precio es alto y se mantiene que en una zona industrial que cada vez se va devaluando que en una "Quasi-residential Zone" donde en estos ultimos años empieza a valer bastante mas el metro cuadrado.
+
+#### Prefecture
+
+Veamos respecto a la Prefectura.
 
 ```{r, warning=FALSE}
 Unit.Price.Year.Prefecture <- df_japan %>% group_by(Year,Prefecture) %>% summarise(mean(UnitPrice), .groups = 'drop')
@@ -263,7 +268,6 @@ tb3
 ```
 
 La misma situación es un factor a tener en cuenta también que no es lo mismo una vivienda en Tokio que en Hokkaido. Incluso, posiblemente dentro de la misma prefectura, la evolución del metro cuadrado sea diferente.
-
 
 ### Comparación de medias
 
@@ -304,10 +308,7 @@ df_japan_train <- df_japan[train_index,columns_model]
 
 ```
 
-
-
 Creamos nuestro primer modelo, empleando únicamente las variables Area y Frontage que habíamos visto que presentan una fuerte correlación con el precio de las viviendas.
-
 
 ```{r, warning=FALSE}
 
@@ -315,7 +316,6 @@ model <- lm(UnitPrice~Area+ Frontage, data=df_japan_train)
 summary(model)$r.squared
 
 ```
-
 
 Como se puede ver, el valor de R^2 es bastante bajo por lo que planteamos añadir algunas de las variables categóricas del dataset (Type, Region, Prefecture, CityPlanning y Renovation) para observar si mejoran el modelo a crear:
 
@@ -329,7 +329,6 @@ summary(model2)$r.squared
 
 ```
 Como podemos ver, tras añadir estas variables el modelo mejora bastante.
-
 
 Añadimos también MunicipalityCode, Structure y BuildingYear a la regresión con el siguiente resultado:
 
