@@ -12,6 +12,11 @@ link-citations: yes
 fontsize: 10pt # 10pt,11pt
 geometry: margin = 2.5cm #1.2in
 output:
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+    highlight: default
+    number_sections: yes
   html_document:
     highlight: default
     number_sections: yes
@@ -20,11 +25,6 @@ output:
     toc_depth: 2
     include:
       in_header: 'Header.html'
-  pdf_document:
-    toc: yes
-    toc_depth: '2'
-    highlight: default
-    number_sections: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -41,7 +41,7 @@ library(car)
 
 # Descripción del dataset
 
-Nos disponemos a estudiar un Dataset cedido por el MLIT (Ministry of Land, Infrastructure, Transport and Tourism) de Japón. Es un dataset que se publicó en Kaggle y contiene Un listado de transacciones de inmuebles desde 2005 a 2019 de las 7 prefecturas de Japón y puedes descargarse en la siguiente url:
+Nos disponemos a estudiar un Dataset cedido por el MLIT (Ministry of Land, Infrastructure, Transport and Tourism) de Japón. Es un dataset que se publicó en Kaggle y contiene un listado de transacciones de inmuebles desde 2005 a 2019 de las 7 prefecturas de Japón y puedes descargarse en la siguiente url:
 
 https://www.kaggle.com/datasets/nishiodens/japan-real-estate-transaction-prices
 
@@ -123,10 +123,10 @@ Podemos ver que, según nuestra definición, no tenemos ventas duplicadas.
 Tomamos las siguientes decisiones.
 
 * Eliminamos el ID que realmente no nos dice nada.
-* Nos quedamos con el máximo tiempo hasta la estación más próxima. Somos pesimistas en este aspecto.
 * Eliminamos el precio en moneda extranjera.
 * Calculamos nosotros el precio por metro cuadrado dividiendo el precio de la venta entre el área. Asumimos que el campo AREA, incluye el resto de campos referidos a superficies.
-* Eliminamos los terrenos no edificados
+* Eliminamos los terrenos no edificados.
+* Limpiamos datos nulos.
 
 
 
